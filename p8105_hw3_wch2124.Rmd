@@ -90,10 +90,14 @@ excellent_data |>
   #ggplot(aes(x = data_value, fill = response_ordered)) +
   #geom_density(aes(fill = response_ordered), alpha = .5)
 
+```
 
+## Problem 3 
 
-
-
+```{r}
+## load, tidy, merge, and otherwise organize the data sets.
+covar_data = read.csv("nhanes_covar.csv")
+accel_data = read.csv("nhanes_accel.csv")
 
 
 ```
