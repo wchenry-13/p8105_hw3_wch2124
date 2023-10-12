@@ -67,6 +67,34 @@ states_obs <- brfss_smart2010 |>
   
 ## Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the data_value across locations within a state.
 
+excellent_data <- brfss_smart2010 |> 
+  filter(response %in% c("Excellent")) |>
+  select(year, locationabbr, data_value) |>
+  group_by(locationabbr, year) |> 
+  mutate(
+    avg_data_value = mean(data_value)) |> 
+  select(year, locationabbr, avg_data_value) |> 
+  distinct()
+
+excellent_data |> 
+  ggplot(aes(x = year, y = avg_data_value)) +
+  geom_line(aes(group = locationabbr, color = locationabbr))
+
+## make a two-panel plot showing, for the years 2006, and 2010, distribution of data_value for responses (“Poor” to “Excellent”) among locations in NY State
+
+#states_obs |> 
+ # select(year, data_value, locationabbr, locationdesc, response_ordered) |> 
+  #filter(
+   # year == 2006 | year == 2010,
+   # locationabbr == "NY") |> 
+  #ggplot(aes(x = data_value, fill = response_ordered)) +
+  #geom_density(aes(fill = response_ordered), alpha = .5)
+
+
+
+
+
+
 
 ```
 
