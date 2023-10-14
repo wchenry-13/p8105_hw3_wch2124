@@ -107,9 +107,45 @@ brfss_smart2010 |>
 
 ```{r}
 ## load, tidy, merge, and otherwise organize the data sets.
-covar_data = read.csv("nhanes_covar.csv")
-accel_data = read.csv("nhanes_accel.csv")
 
+covar_data <- read.csv("nhanes_covar.csv", sep = '\t', skip = 4, col.names = c("seqn", "SEQN"))
+accel_data <- read.csv("nhanes_accel.csv")
+
+covar_data_clean = covar_data |> 
+  drop_na() |> 
+  janitor::clean_names() |> 
+  mutate(
+    sex = recode(sex, '1' = "male", '2' = "female"),
+    education = recode(education, '1' = "less than high school", '2' = "high school equivalent", '3' = "more than high school")) |> 
+  mutate(education = factor(education, levels = c("less than high school", "high school equivalent", "more than high")))
+  filter(age > 21)
+  
+merged_df = 
+  covar_data_clean |> 
+  left_join(accel_data_clean, by = "seqn")
+```
+
+## Produce a reader-friendly table for the number of men and women in each education category, and create a visualization of the age distributions for men and women in each education category
+
+```{r}
+merged_df |>
+  drop_na() |> 
+  group_by(sex, education) |>
+  summarize(count = n()) |> 
+  knitr::kable(digits = 1)  
+
+merged_df |>
+  drop_na() |> 
+  ggplot(aes(x = age, fill = education)) +
+  geom_histogram()
+
+```
+
+## Using your tidied dataset, aggregate across minutes to create a total activity variable for each participant. Plot these total activities
+
+```{r}
+
+  
 
 ```
 
