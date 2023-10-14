@@ -10,27 +10,47 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Problem 1
 
-This data set consists of 1,384,617 observations of 15 variables. Some key variables include product ID, department, and product name. The user ID's appear to be grouped by order number, which makes sense because when you order on Instacart, you are given a unique order number that corresponds to your unique user ID. 
+This data set consists of 1,384,617 observations of 15 variables. Some key variables include product ID, department, and product name. The user ID's appear to be grouped by order number, which makes sense because when you order on Instacart, you are given a unique order number that corresponds to your unique user ID. There are 134 aisles, with fresh vegetables and fresh fruits being the most ordered items s
 ```{r}
 library(tidyverse)
 library(dplyr)
 library(p8105.datasets)
 data("instacart")
 
-## how many aisles are there and which aisles are the most items ordered from?
-
-#instacart_data = 
-  #instacart |> 
-  #as_tibble()
+instacart = 
+  instacart |> 
+  as_tibble()
   
-#group_by(aisle) |>
-  #summarize(n_obs = n())
+instacart |> 
+  count(aisle) |> 
+  arrange(desc(n))  
 
-## make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
+instacart |> 
+  count(aisle) |> 
+  filter(n > 10000) |> 
+  mutate(aisle = fct_reorder(aisle, n)) |> 
+  ggplot(aes(x = aisle, y = n)) + 
+  geom_point() + 
+  labs(title = "Number of items ordered in each aisle") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
 
-#ggplot(instacart_data, aes(x = add_to_cart_order, y = aisle)) + geom_point()
-  
-  
+instacart |> 
+  filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) |>
+  group_by(aisle) |> 
+  count(product_name) |> 
+  mutate(rank = min_rank(desc(n))) |> 
+  filter(rank < 4) |> 
+  arrange(desc(n)) |>
+  knitr::kable()
+
+instacart |>
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) |>
+  group_by(product_name, order_dow) |>
+  summarize(mean_hour = mean(order_hour_of_day)) |>
+  pivot_wider(
+    names_from = order_dow, 
+    values_from = mean_hour) |>
+  knitr::kable(digits = 2)
 ```
 
 ## Problem 2
@@ -56,6 +76,7 @@ data("brfss_smart2010")
 ```
 
 ## in 2002, which states were observed at 7 or more locations? What about in 2010?
+In 2002, 6 states were observed at 7 or more locations. In 2010, 14 states were observed in 7 or more locations. 
 
 ```{r}
 states_obs <- brfss_smart2010 |> 
@@ -83,15 +104,21 @@ excellent_data <- brfss_smart2010 |>
 
 ## spaghetti plot
 
+The plot shows the average data value for each state from the years 2002-2010. Overall, the data has a lot of overlap, but has some outlier values. For example, there appears to be a low average data value score in 2005 for the state of West Virginia. 
 ```{r}
 excellent_data |> 
   ggplot(aes(x = year, y = avg_data_value)) +
-  geom_line(aes(group = locationabbr, color = locationabbr))
+  geom_line(aes(group = locationabbr, color = locationabbr)) +
+  labs(
+    title = "Average Data Value Among States by Year",
+    x = "Year",
+    y = "Average Data Value")
 
 ```
 
 ## make a two-panel plot showing, for the years 2006, and 2010, distribution of data_value for responses (“Poor” to “Excellent”) among locations in NY State
 
+Overall, there is more variability in the 2010 resonses compared to the 2006 responses. The "very good" response appears to have improved the most over the course of four years. 
 ```{r}
 brfss_smart2010 |> 
   select(year, data_value, locationabbr, locationdesc, response) |> 
@@ -100,6 +127,11 @@ brfss_smart2010 |>
     locationabbr == "NY") |> 
   ggplot(aes(x = data_value, fill = response)) +
   geom_boxplot(aes(fill = response), alpha = .5) +
+   
+  labs(
+    title = "Data Value Across Responses in New York",
+    x = "Data Value",
+    fill = "Response") + 
   facet_grid(. ~ year)
 ```
 
@@ -108,44 +140,50 @@ brfss_smart2010 |>
 ```{r}
 ## load, tidy, merge, and otherwise organize the data sets.
 
-covar_data <- read.csv("nhanes_covar.csv", sep = '\t', skip = 4, col.names = c("seqn", "SEQN"))
+covar_data <- read.csv("nhanes_covar.csv", skip = 4)  #, sep = '\t', skip = 4, col.names = c("seqn", "SEQN"))
 accel_data <- read.csv("nhanes_accel.csv")
 
 covar_data_clean = covar_data |> 
+  filter(age >= 21) |> 
   drop_na() |> 
-  janitor::clean_names() |> 
   mutate(
-    sex = recode(sex, '1' = "male", '2' = "female"),
-    education = recode(education, '1' = "less than high school", '2' = "high school equivalent", '3' = "more than high school")) |> 
-  mutate(education = factor(education, levels = c("less than high school", "high school equivalent", "more than high")))
-  filter(age > 21)
-  
-merged_df = 
-  covar_data_clean |> 
-  left_join(accel_data_clean, by = "seqn")
+    sex = 
+      case_match(
+        sex,
+        1 ~ "male",
+        2 ~ "female"
+      ), 
+    sex = as.factor(sex),
+    education = 
+      case_match(
+        education,
+        1 ~ "less than high school",
+        2 ~ "high school equivalent",
+        3 ~ "more than high school"
+      ), 
+    education = as.factor(education)
+  )
+
+merged_data = 
+  left_join(covar_data_clean, accel_data, by = "SEQN")
+
 ```
 
-## Produce a reader-friendly table for the number of men and women in each education category, and create a visualization of the age distributions for men and women in each education category
+## Produce a reader-friendly table for the number of men and women in each education category, and create a visualization of the age distributions for men and women in each education category. Comment on these items.
 
+Across each category, 
 ```{r}
-merged_df |>
+merged_data |>
   drop_na() |> 
   group_by(sex, education) |>
   summarize(count = n()) |> 
   knitr::kable(digits = 1)  
 
-merged_df |>
+merged_data |>
   drop_na() |> 
   ggplot(aes(x = age, fill = education)) +
+  labs(
+    title = "Age Distributions Across Education Levels") +
   geom_histogram()
-
-```
-
-## Using your tidied dataset, aggregate across minutes to create a total activity variable for each participant. Plot these total activities
-
-```{r}
-
-  
-
 ```
 
