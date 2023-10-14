@@ -171,7 +171,7 @@ merged_data =
 
 ## Produce a reader-friendly table for the number of men and women in each education category, and create a visualization of the age distributions for men and women in each education category. Comment on these items.
 
-Across each category, 
+Between 20-40 years old, most individuals had more than a high school education. Between 40-60 years old, the education level is more variable between high school equivalent, less than high school, and more than high school. Ages 60 and above, less individuals have more than a high school education compared to the other age groups. 
 ```{r}
 merged_data |>
   drop_na() |> 
@@ -185,5 +185,31 @@ merged_data |>
   labs(
     title = "Age Distributions Across Education Levels") +
   geom_histogram()
+```
+## Using your tidied dataset, aggregate across minutes to create a total activity variable for each participant. Plot these total activities 
+
+Overall across the plots, it does not seem that education level impacts total activity. The more than high school panel has the most data points, but they are sporadic like the other two education level panels. Across sex, women appear to have slightly more total activity than men in the high school equivalent and more than high school panels. 
+```{r}
+merged_data |> 
+  mutate(
+    total_activity = rowSums(across(min1:min1440), na.rm = TRUE)) |> 
+    ggplot(aes(x = age, y = total_activity, color = sex)) + geom_point() + geom_smooth(se = FALSE) + labs(y = "Total Activity") + facet_grid(.~education)
+  
+```
+
+## Make a three-panel plot that shows the 24-hour activity time courses for each education level and use color to indicate sex.
+Describe in words any patterns or conclusions you can make based on this graph; including smooth trends may help identify differences.
+
+The graph illustrates that across all education levels, females had a higher average 24-hour activity rate compared to males. Females with an education level of more than high school have the highest median 24-hour activity compared to females in the other education levels. Males with an education level of less than high school have the highest median 24-hour actvivity compared to males in the other education levels. 
+```{r}
+day_activity = merged_data |> 
+  group_by(education, sex) |> 
+  summarize(across(starts_with("min"), ~ mean(.), .names = "mean_{.col}"), .groups = "drop") |> 
+  pivot_longer(cols = starts_with("mean_"), names_to = "time", values_to = "mean") |> 
+  mutate(
+    time = substring(time, 9), 
+    time = as.numeric(time))
+ggplot(day_activity, aes(x = time, y = mean, fill = sex)) + geom_boxplot() +  facet_grid(.~ education) +
+  labs(title = "24-Hour Activity Time Courses by Education Level and Sex")
 ```
 
